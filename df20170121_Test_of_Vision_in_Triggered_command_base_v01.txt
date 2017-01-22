@@ -1,0 +1,93 @@
+
+
+Goal:
+
+Create a command based robot program and have the vision library process a single image when the trigger is pulled
+
+
+
+Process:
+) Create a command based program using RobotBuilder. 
+	- Single subsystem Drivetrain 
+	- Joystick
+	- Simple commands - One is called when the joystick is pulled.
+
+) Instrument the code.  Place Println at all init methods and when trigger is pulled
+
+# Add sample code from Vision Processing manual (Page 93)
+  
+) Added imports
+import org.opencv.core.Rect;
+import org.opencv.imgproc.Imgproc;
+import com.ctre.CANTalon;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.RobotDrive;
+import edu.wpi.first.wpilibj.vision.VisionRunner;
+import edu.wpi.first.wpilibj.vision.VisionThread;
+
+ !!! - Caused errors 
+
+Note: CAN Talon SRX has been removed from WPILib. See this blog for more info and find the CTRE Toolsuite installer here: http://www.ctr-electronics.com/control-system/hro.html#product_tabs_technical_resources
+
+) Adding openCV to library
+  Project -> Properties -> "JAVA Build Path" -> Libraries tab -> Add external Jar -> C:\Users\robot\wpilib\java\current\lib
+ >>> Added opencv.jar
+ >>> added cscore.jar
+
+This cleared errors except TalonSRX
+
+) Adding Class Members to Robot Class
+
+
+private static final int IMG_WIDTH = 320;
+private static final int IMG_HEIGHT = 240;
+private VisionThread visionThread;
+private double centerX = 0.0;
+private RobotDrive drive;
+private final Object imgLock = new Object();
+
+
+
+) Adding code to Robot Init robotInit()
+
+		UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+		camera.setResolution(IMG_WIDTH, IMG_HEIGHT);
+
+		visionThread = new VisionThread(camera, new Pipeline(), pipeline -> {   // Start of Lambda Expression
+			if (!pipeline.filterContoursOutput().isEmpty()) {
+				Rect r = Imgproc.boundingRect(pipeline.filterContoursOutput().get(0));
+				synchronized (imgLock) {
+					centerX = r.x + (r.width / 2);
+				}
+			}
+		});  // DF:  End of Lambda Expression
+
+
+		visionThread.start();
+
+
+ !! - Caused error with "new Pipeline()"
+
+) Added GripPipeLine Class from Vision Tool and replaced "new Pipeline()" with "new GripPipeline(),"
+
+
+
+) Added to autonomousPeriodic() in Robot class
+  
+	double centerX;
+	synchronized (imgLock) {
+		centerX = this.centerX;
+	}
+
+
+Run and provided some output
+
+Tried to update GripPipeline using tool.   Noted that the last video processing stage must be "filterContoursOutput" with this code.
+
+
+
+
+
+========================================
